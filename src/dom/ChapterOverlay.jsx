@@ -1,12 +1,8 @@
 import { useEffect, useRef } from "react";
 import { chapters } from "../scene/chapters";
-import { scrollState } from "../scroll/scrollState";
+import { syncExperience } from "../experience/experienceState";
 
-// Renders the chapter label + copy fixed over the canvas. Visibility is
-// driven by scrollState.chapterIndex, applied directly to each element's
-// style in a lightweight rAF loop — this sidesteps a React re-render 60
-// times a second while still staying perfectly in sync with the 3D camera,
-// since both read the same scrollState object.
+// DOM and WebGL resolve the same authored timeline from the same scroll input.
 export function ChapterOverlay() {
   const refs = useRef([]);
 
@@ -14,19 +10,17 @@ export function ChapterOverlay() {
     let frameId;
 
     const tick = () => {
-      const segmentCount = chapters.length - 1;
-      const activeChapterIndex = Math.min(
-        chapters.length - 1,
-        Math.max(0, Math.floor(scrollState.progress * segmentCount))
-      );
+      const resolved = syncExperience();
 
       refs.current.forEach((el, index) => {
         if (!el) return;
-        const isActive = index === activeChapterIndex;
-        el.style.opacity = isActive ? "1" : "0";
-        el.style.transform = isActive
-          ? "translateY(0px)"
-          : "translateY(12px)";
+        const isActive = chapters[index].id === resolved.activeBeat;
+        el.setAttribute("aria-hidden", String(!isActive));
+        el.dataset.theme = resolved.theme;
+        const weight = resolved.beats[chapters[index].id].weight;
+        el.style.transition = "none";
+        el.style.opacity = String(weight);
+        el.style.transform = `translateY(${12 * (1 - weight)}px)`;
       });
       frameId = requestAnimationFrame(tick);
     };

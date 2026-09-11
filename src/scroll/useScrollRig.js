@@ -3,7 +3,6 @@ import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { scrollState } from "./scrollState";
-import { chapters } from "../scene/chapters";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,8 +10,7 @@ gsap.registerPlugin(ScrollTrigger);
 //   1. Smooths native scroll with Lenis.
 //   2. Feeds Lenis's smoothed position into GSAP's ticker, so ScrollTrigger
 //      sees the eased position rather than the raw, jumpy native scroll.
-//   3. On every tick, writes normalized progress (0-1) and the current
-//      chapter index into scrollState, which the camera rig and DOM
+//   3. On every tick, writes normalized progress (0-1) into scrollState, which the camera rig and DOM
 //      overlay both read from in their own render loops.
 //
 // Swap the ScrollTrigger `trigger`/`start`/`end` for a pinned, per-chapter
@@ -41,10 +39,6 @@ export function useScrollRig(scrollContainerRef) {
       scrub: true,
       onUpdate: (self) => {
         scrollState.progress = self.progress;
-        scrollState.chapterIndex = Math.min(
-          chapters.length - 1,
-          Math.floor(self.progress * chapters.length)
-        );
       },
     });
 

@@ -1,5 +1,13 @@
 :root {
   color-scheme: light;
+
+  --convalt-bg: #e9e6df;
+  --convalt-bg-light: #f5f1e8;
+  --convalt-bg-mid: #eeeae0;
+  --convalt-bg-dark: #ddd8ce;
+
+  --convalt-text: #292c29;
+  --convalt-muted: #656963;
 }
 
 * {
@@ -11,73 +19,277 @@ body,
 #root {
   margin: 0;
   padding: 0;
+
   width: 100%;
-  background: #e9e6df;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-height: 100%;
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Helvetica,
+    Arial,
+    sans-serif;
+
+  background: var(--convalt-bg);
 }
 
-/* The canvas is fixed full-viewport and sits behind everything else. It
-   never scrolls and never unmounts — see PersistentCanvas.jsx. */
+body {
+  color: var(--convalt-text);
+
+  overflow-x: hidden;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   PERSISTENT WEBGL CANVAS
+   ============================================================ */
+
+/*
+  The fixed wrapper itself provides the atmospheric background.
+
+  The WebGL canvas remains transparent, so this gradient shows
+  through behind all geometry.
+*/
 .persistent-canvas {
   position: fixed;
   inset: 0;
+
   width: 100vw;
   height: 100vh;
+
   z-index: 0;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(ellipse 82% 72% at 68% 36%,
+      var(--convalt-bg-light) 0%,
+      #f1ede4 26%,
+      var(--convalt-bg-mid) 46%,
+      var(--convalt-bg) 68%,
+      var(--convalt-bg-dark) 100%);
 }
 
 .persistent-canvas canvas {
   display: block;
+
+  width: 100%;
+  height: 100%;
+
+  background: transparent;
 }
 
-/* The text overlay is also fixed, sitting above the canvas. Individual
-   .chapter-copy blocks fade in/out; only one is visible at a time. */
+/* ============================================================
+   CHAPTER TYPOGRAPHY
+   ============================================================ */
+
 .chapter-overlay {
   position: fixed;
   inset: 0;
+
   z-index: 1;
-  display: flex;
-  align-items: flex-end;
-  padding: 6vh 6vw;
+
   pointer-events: none;
 }
 
+/*
+  Every chapter occupies the same editorial position.
+
+  Only opacity/transform should change when chapter state changes.
+*/
 .chapter-copy {
   position: absolute;
-  left: 6vw;
-  bottom: 8vh;
-  max-width: 480px;
+
+  left: clamp(28px, 6vw, 96px);
+
+  bottom:
+    clamp(48px,
+      8vh,
+      110px);
+
+  width: min(760px, 74vw);
+
   opacity: 0;
-  transition: opacity 0.6s ease, transform 0.6s ease;
-  color: #343733;
+
+  color: var(--convalt-text);
+
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
+
+  will-change:
+    opacity,
+    transform;
 }
 
+/*
+  Small architectural chapter metadata.
+*/
 .chapter-label {
   display: block;
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
-  color: #686c65;
-  margin-bottom: 0.5rem;
+
+  margin-bottom: 1.2rem;
+
+  font-size: 0.72rem;
+  line-height: 1;
+
+  font-weight: 500;
+
+  letter-spacing: 0.13em;
+
+  text-transform: uppercase;
+
+  color: var(--convalt-muted);
 }
 
+/*
+  Main editorial statement.
+
+  white-space: pre-line allows the \n values from chapters.js
+  to control intentional headline line breaks.
+*/
 .chapter-text {
-  font-size: 1.4rem;
-  line-height: 1.4;
   margin: 0;
+
+  max-width: 760px;
+
+  font-size:
+    clamp(3.8rem,
+      7.2vw,
+      7.8rem);
+
+  line-height: 0.86;
+
+  font-weight: 500;
+
+  letter-spacing: -0.058em;
+
+  white-space: pre-line;
+
+  color: var(--convalt-text);
 }
 
-/* The spacer creates real page height so the browser has something to
-   scroll. It's invisible — the canvas and overlay above are what's seen. */
+/* ============================================================
+   SCROLL HEIGHT
+   ============================================================ */
+
+/*
+  The spacer provides real document height for Lenis / ScrollTrigger.
+
+  It remains visually empty because both the WebGL canvas and
+  chapter typography are fixed.
+*/
 .scroll-spacer {
   position: relative;
+
   z-index: 2;
+
   pointer-events: none;
 }
 
 .scroll-section {
-  height: 100vh;
   width: 100%;
+
+  height: 100vh;
+  height: 100svh;
 }
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .chapter-copy {
+    left: 32px;
+
+    bottom: 56px;
+
+    width:
+      min(680px,
+        calc(100vw - 64px));
+  }
+
+  .chapter-text {
+    font-size:
+      clamp(3.4rem,
+        10vw,
+        6rem);
+  }
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .persistent-canvas {
+    background:
+      radial-gradient(ellipse 110% 62% at 60% 28%,
+        #f5f1e8 0%,
+        #efebe2 40%,
+        var(--convalt-bg) 72%,
+        #dfdad0 100%);
+  }
+
+  .chapter-copy {
+    left: 24px;
+
+    bottom: 44px;
+
+    width:
+      calc(100vw - 48px);
+  }
+
+  .chapter-label {
+    margin-bottom: 0.9rem;
+
+    font-size: 0.66rem;
+
+    letter-spacing: 0.12em;
+  }
+
+  .chapter-text {
+    max-width: 100%;
+
+    font-size:
+      clamp(3rem,
+        14vw,
+        5rem);
+
+    line-height: 0.88;
+
+    letter-spacing: -0.05em;
+  }
+}
+
+/* ============================================================
+   VERY SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 420px) {
+  .chapter-copy {
+    left: 20px;
+
+    bottom: 36px;
+
+    width:
+      calc(100vw - 40px);
+  }
+
+  .chapter-text {
+    font-size:
+      clamp(2.7rem,
+        13.5vw,
+        4.2rem);
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
   .chapter-copy {

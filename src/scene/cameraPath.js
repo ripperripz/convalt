@@ -1,28 +1,30 @@
-import { chapters } from "./chapters";
+import { cameraKeyframes as keys } from "./cameraKeyframes.js";
 
-const lerp = (a, b, t) => a + (b - a) * t;
-const lerpVec3 = (a, b, t) => [
-  lerp(a[0], b[0], t),
-  lerp(a[1], b[1], t),
-  lerp(a[2], b[2], t),
-];
-
-// Splits progress (0-1) into N-1 segments between consecutive chapter
-// waypoints and linearly interpolates within the active segment.
-// Replace this with a THREE.CatmullRomCurve3 sampled from a real Blender
-// camera path once one exists — the call signature (progress in, transform
-// out) stays the same, so nothing else has to change.
-export function getCameraTransform(progress) {
-  const segmentCount = chapters.length - 1;
-  const scaled = Math.min(progress, 0.9999) * segmentCount;
-  const index = Math.floor(scaled);
-  const localT = scaled - index;
-
-  const from = chapters[index];
-  const to = chapters[Math.min(index + 1, chapters.length - 1)];
-
-  return {
-    position: lerpVec3(from.position, to.position, localT),
-    lookAt: lerpVec3(from.lookAt, to.lookAt, localT),
-  };
+// Time-aware cubic Hermite spline. Shared tangents keep velocity continuous;
+// moderate tension limits overshoot without stopping at every spatial extremum.
+function tangent(index, field, axis) {
+  const before = Math.max(0, index - 1);
+  const after = Math.min(keys.length - 1, index + 1);
+  const tension = index === 0 || index === keys.length - 1 ? 1 : 0.65;
+  return tension * (keys[after][field][axis] - keys[before][field][axis])
+    / (keys[after].at - keys[before].at);
+}
+const tangents = keys.map((_, index) => Object.fromEntries(
+  ["position", "lookAt"].map(field => [field, [0, 1, 2].map(axis => tangent(index, field, axis))])
+));
+export function getCameraTransform(progress, out = { position: [0, 0, 0], lookAt: [0, 0, 0] }) {
+  const p = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
+  let index = 0;
+  while (index < keys.length - 2 && p > keys[index + 1].at) index++;
+  const a = keys[index], b = keys[index + 1], duration = b.at - a.at;
+  const t = (p - a.at) / duration, t2 = t * t, t3 = t2 * t;
+  for (const field of ["position", "lookAt"]) {
+    for (let axis = 0; axis < 3; axis++) {
+      out[field][axis] = (2*t3 - 3*t2 + 1) * a[field][axis]
+        + (t3 - 2*t2 + t) * duration * tangents[index][field][axis]
+        + (-2*t3 + 3*t2) * b[field][axis]
+        + (t3 - t2) * duration * tangents[index + 1][field][axis];
+    }
+  }
+  return out;
 }
